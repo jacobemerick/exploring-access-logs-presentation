@@ -98,6 +98,7 @@ summary(access_log[, 2:5])
 access_log <- access_log[,c('V4', 'V5', 'V6', 'V7', 'V8', 'V9',
                             'V10', 'V11', 'V12')]
 access_log$V4 <- paste(access_log$V4, ' ', access_log$V5)
+access_log$V4 <- strptime(access_log$V4, '[%d/%b/%Y:%H:%M:%S %z]')
 access_log <- access_log[,c('V4', 'V6', 'V7', 'V8', 'V9', 'V10',
                             'V11', 'V12')]
 colnames(access_log) <- c('date', 'request', 'response', 'size',
@@ -172,8 +173,10 @@ substr(names(error_agent), start = 0, stop = 50)
 
 
 ```r
-error_time <- access_log[error_filter, c('response', 'time')]
-aggregate(time ~ response, data = error_time, FUN = 'mean')
+aggregate(
+    time ~ response,
+    data = access_log[error_filter,],
+    FUN = 'mean')
 ```
 
 ```
@@ -187,6 +190,57 @@ aggregate(time ~ response, data = error_time, FUN = 'mean')
 ## 7      502   0.06263
 ## 8      504 160.00267
 ```
+
+
+## Exploring Data: Test Response Times
+
+Let's assume that the means of error and non-error responses are equal (the null hypothesis). Let's try to reject that!
+
+
+```r
+error_response <- aggregate(time ~ response,
+    data = access_log[error_filter,], FUN = 'mean')
+nonerror_response <- aggregate(time ~ response,
+    data = access_log[!error_filter,], FUN = 'mean')
+t.test(error_response$time, nonerror_response$time,
+    alternative = 'greater')$conf
+```
+
+```
+## [1] -17.52    Inf
+## attr(,"conf.level")
+## [1] 0.95
+```
+
+
+## Exploring Data: Linear Modeling
+
+We know that 504s account for a lot of response time. Can we fit a line to predict time based on response code?
+
+
+```r
+fit <- lm(time ~ response, data = access_log)
+summary(abs(fit$residuals))
+```
+
+```
+##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+##    0.00    0.09    0.14    0.23    0.21  179.00
+```
+
+Note: if you wanted to actually test the fit, you would split up your set and run training vs testing sets. Plus this data is very, very discrete. But this is for illustrative purposes only.
+
+
+## Exploring Data: Fitting the Model
+
+
+```r
+plot(time ~ response, data = access_log, col = rgb(0, 0, 0, .2),
+     pch = 20, main = 'Response Types vs Time')
+lines(fit$fitted)
+```
+
+![plot of chunk unnamed-chunk-9](./tech-talk_files/figure-html/unnamed-chunk-9.png) 
 
 
 ## Summary
