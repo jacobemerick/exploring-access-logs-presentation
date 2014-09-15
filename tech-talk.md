@@ -219,8 +219,8 @@ We know that 504s account for a lot of response time. Can we fit a line to predi
 
 
 ```r
-fit <- lm(time ~ response, data = access_log)
-summary(abs(fit$residuals))
+fit_response <- lm(time ~ response, data = access_log)
+summary(abs(fit_response$residuals))
 ```
 
 ```
@@ -236,11 +236,63 @@ Note: if you wanted to actually test the fit, you would split up your set and ru
 
 ```r
 plot(time ~ response, data = access_log, col = rgb(0, 0, 0, .2),
-     pch = 20, main = 'Response Types vs Time')
-lines(fit$fitted)
+     pch = 20, main = 'Time vs Type')
+lines(fit_response$fitted)
 ```
 
 ![plot of chunk unnamed-chunk-9](./tech-talk_files/figure-html/unnamed-chunk-9.png) 
+
+
+## Exploring Data: Checking on Size
+
+What about the size of a response? Does that change the response time?
+
+
+```r
+summary(access_log$size)
+```
+
+```
+##     Min.  1st Qu.   Median     Mean  3rd Qu.     Max. 
+## 0.00e+00 1.80e+04 2.89e+04 6.14e+04 3.23e+04 3.16e+08
+```
+
+
+```r
+access_log$size_kb <- access_log$size / 1000
+size_filter <- access_log$size_kb > 10 & access_log$size_kb < 500
+```
+
+
+## Exploring Data: Fitting the Line
+
+
+```r
+fit_size <- lm(time ~ size_kb, data = access_log[size_filter,])
+fit_size
+```
+
+```
+## 
+## Call:
+## lm(formula = time ~ size_kb, data = access_log[size_filter, ])
+## 
+## Coefficients:
+## (Intercept)      size_kb  
+##    0.254774     0.000965
+```
+
+
+## Exploring Data: Checking Line by Size
+
+
+```r
+plot(time ~ size_kb, data = access_log[size_filter,],
+     col = rgb(0, 0, 0, .2), pch = 20, main = 'Time v Size')
+lines(fit_size$fitted)
+```
+
+![plot of chunk unnamed-chunk-13](./tech-talk_files/figure-html/unnamed-chunk-13.png) 
 
 
 ## Summary
@@ -248,6 +300,8 @@ lines(fit$fitted)
 504 errors contribute heavily to the average response times in our nginx logs.
 
 This makes sense, because 504 is Gateway Timeout Error.
+
+Response size does not have a huge impact on time.
 
 Oh, and Data Science is fun!
 

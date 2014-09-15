@@ -158,8 +158,8 @@ t.test(error_response$time, nonerror_response$time,
 We know that 504s account for a lot of response time. Can we fit a line to predict time based on response code?
 
 ```{r, cache=TRUE}
-fit <- lm(time ~ response, data = access_log)
-summary(abs(fit$residuals))
+fit_response <- lm(time ~ response, data = access_log)
+summary(abs(fit_response$residuals))
 ```
 
 Note: if you wanted to actually test the fit, you would split up your set and run training vs testing sets. Plus this data is very, very discrete. But this is for illustrative purposes only.
@@ -169,8 +169,40 @@ Note: if you wanted to actually test the fit, you would split up your set and ru
 
 ```{r, cache=TRUE}
 plot(time ~ response, data = access_log, col = rgb(0, 0, 0, .2),
-     pch = 20, main = 'Response Types vs Time')
-lines(fit$fitted)
+     pch = 20, main = 'Time vs Type')
+lines(fit_response$fitted)
+```
+
+
+## Exploring Data: Checking on Size
+
+What about the size of a response? Does that change the response time?
+
+```{r}
+summary(access_log$size)
+```
+
+```{r}
+access_log$size_kb <- access_log$size / 1000
+size_filter <- access_log$size_kb > 10 & access_log$size_kb < 500
+```
+
+
+## Exploring Data: Fitting the Line
+
+```{r}
+fit_size <- lm(time ~ size_kb, data = access_log[size_filter,])
+fit_size
+```
+
+
+## Exploring Data: Checking Line by Size
+
+```{r, cache=TRUE}
+
+plot(time ~ size_kb, data = access_log[size_filter,],
+     col = rgb(0, 0, 0, .2), pch = 20, main = 'Time v Size')
+lines(fit_size$fitted)
 ```
 
 
@@ -179,6 +211,8 @@ lines(fit$fitted)
 504 errors contribute heavily to the average response times in our nginx logs.
 
 This makes sense, because 504 is Gateway Timeout Error.
+
+Response size does not have a huge impact on time.
 
 Oh, and Data Science is fun!
 
